@@ -1,3 +1,4 @@
+// index.js
 const {
   default: makeWASocket,
   DisconnectReason,
@@ -7,36 +8,39 @@ const {
 const P = require('pino');
 
 async function startBot() {
+  // 1) تهيئة الجلسة (session)
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info_baileys');
+
+  // 2) جلب آخر نسخة من Baileys
   const { version } = await fetchLatestBaileysVersion();
 
+  // 3) إنشاء اتصال واتساب مع طباعة QR في اللوج
   const sock = makeWASocket({
     version,
     auth: state,
-    logger: P({ level: 'error' }),
-    printQRInTerminal:  true // منع الطباعة الآلية، هنتحكّم بالـ QR يدوي
+    printQRInTerminal: true,        // ← لازم يكون هنا
+    logger: P({ level: 'error' })
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', update => {
-    const { connection, lastDisconnect, qr } = update;
-
-    // 1) لو جالك QR code، اطبعه
+  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+    // 4) لو وصل QR
     if (qr) {
       console.log('🔗 QR CODE:', qr);
-      console.log('— امسح الكود ده من واتساب رقم 01002977381');
+      console.log('— انسخ النص ده وامسحه من واتساب جهاز خدمة العملاء');
     }
 
-    // 2) لو اتّصل
+    // 5) حالة الاتصال المفتوح
     if (connection === 'open') {
-      console.log('✅ WhatsApp connected');
-      // تبعت رسالة تأكيد شغّل البوت
+      console.log('✅ WhatsApp connection open');
+      // ترسل رسالة تأكيد بدء التشغيل
       const adminJid = '201002977381@s.whatsapp.net';
-      sock.sendMessage(adminJid, { text: '🤖 البوت شغال دلوقتي وجاهز!' });
+      sock.sendMessage(adminJid, { text: '🤖 البوت اشتغل وجاهز لاستقبال الطلبات!' })
+        .catch(console.error);
     }
 
-    // 3) لو اتقفل، حاول تعيد الاتصال
+    // 6) لو اتقفل الاتصال
     if (connection === 'close') {
       const code = lastDisconnect.error?.output?.statusCode;
       console.log('❌ Connection closed, reconnecting…', DisconnectReason[code] || code);
@@ -46,4 +50,3 @@ async function startBot() {
 }
 
 startBot().catch(err => console.error('Failed to start bot:', err));
-
