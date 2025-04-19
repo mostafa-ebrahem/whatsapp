@@ -14,7 +14,7 @@ async function startBot() {
     version,
     auth: state,
     logger: P({ level: 'error' }),
-    printQRInTerminal: false // منع الطباعة الآلية، هنتحكّم بالـ QR يدوي
+    printQRInTerminal:  true // منع الطباعة الآلية، هنتحكّم بالـ QR يدوي
   });
 
   sock.ev.on('creds.update', saveCreds);
